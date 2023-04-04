@@ -1,11 +1,15 @@
 #!/usr/bin/env bash
+
 # Installs, configures, and starts the server
 apt-get update
 apt-get -y install nginx
-sudo ufw allow 'Nginx HTTP'
-mkdir -p /var/www/html/
-sudo chmod -R 755 /var/www
+ufw allow 'Nginx HTTP'
+
+mkdir -p /var/www/html
+chmod -R 755 /var/www
 echo 'Hello World!' > /var/www/html/index.html
+
+# Define the new server block configuration
 SERVER_CONFIG=\
 "server {
 	listen 80 default_server;
@@ -13,18 +17,24 @@ SERVER_CONFIG=\
 	root /var/www/html;
 	index index.html index.htm index.nginx-debian.html;
 	server_name _;
+
+	location /redirect_me {
+		return 301 https://www.example.com/;
+	}
+
 	location / {
 		try_files \$uri \$uri/ =404;
 	}
-	if (\$request_filename ~ redirect_me){
-		rewrite ^ https://sketchfab.com/bluepeno/models permanent;
-	}
 }"
 
-bash -c "echo -e '$SERVER_CONFIG' > /etc/nginx/sites-enabled/default"
+# Replace the default server block with the new configuration
+sed -i '/server {/,$d' /etc/nginx/sites-enabled/default
+echo "$SERVER_CONFIG" > /etc/nginx/sites-enabled/default
 
+# Start or restart the nginx service
 if [ "$(pgrep -c nginx)" -le 0 ]; then
 	service nginx start
 else
 	service nginx restart
 fi
+
